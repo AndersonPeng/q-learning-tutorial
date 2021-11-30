@@ -15,19 +15,21 @@ def get_discrete_state(state, bins, s_dim):
 #Main function
 def main():
     #Parameters
-    n_episode   = 20000   #Number of episode
+    n_episode   = 20000   #Number of episodes
     n_disp      = 1000    #Number of steps to display
     n_bins      = 16      #Number of bins
     lr          = 0.1     #Learning rate
     gamma       = 0.95    #Discount factor (gamma)
     eps         = 1.0     #Epsilon
     buffer_size = 512     #Replay byffer size
-    mb_size     = 128     #Mini-batch size
+    mb_size     = 4       #Mini-batch size
 
     #Create environment
     env = gym.make('CartPole-v0')
-    s_dim = len(env.observation_space.high)
+    s_dim = env.observation_space.shape[0]
     a_dim = env.action_space.n
+    print(s_dim)
+    print(a_dim)
 
     #Create Q-table: (n_bins, n_bins, n_bins, n_bins, a_dim)
     bins = [
@@ -36,7 +38,7 @@ def main():
         np.linspace(-0.418, 0.418, n_bins), #Pole angle
         np.linspace(-4.0, 4.0, n_bins)      #Pole velocity at tip
     ]
-    q_table = np.random.uniform(low=-2, high=0, size=([n_bins] * s_dim + [a_dim]))
+    q_table = np.zeros(([n_bins] * s_dim + [a_dim]), dtype=np.float32)
 
     #Start training
     total_rewards = np.zeros((n_episode+1), dtype=np.float32)
@@ -63,17 +65,18 @@ def main():
             discrete_state = next_discrete_state
             total_reward += reward
 
+            #Update Q-table: Q(s, a) <- Q(s, a) + lr * (r(s, a) + gamma * max_a' Q(s', a') - Q(s, a))
+            if len(replay_buffer) >= mb_size:
+                for i in np.random.choice(len(replay_buffer), mb_size, replace=False):
+                    s, a, r, next_s = replay_buffer[i]
+                    max_next_q = np.max(q_table[next_s])
+                    current_q = q_table[s + (a,)]
+                    q_table[s + (a,)] = current_q + lr * (reward + gamma*max_next_q - current_q)
+
+            #Record total reward
             if done:
                 total_rewards[i_episode] = total_reward
                 break
-
-        #Update Q-table: Q(s, a) <- Q(s, a) + lr * (r(s, a) + gamma * max_a' Q(s', a') - Q(s, a))
-        if len(replay_buffer) > mb_size:
-            for i in np.random.choice(len(replay_buffer), mb_size, replace=False):
-                discrete_state, action, reward, next_discrete_state = replay_buffer[i]
-                max_next_q = np.max(q_table[next_discrete_state])
-                current_q = q_table[discrete_state + (action,)]
-                q_table[discrete_state + (action,)] = current_q + lr * (reward + gamma*max_next_q - current_q)
         
         #Decay epsilon exponentially
         eps = np.exp(-0.2 - 4.0*i_episode / n_episode)

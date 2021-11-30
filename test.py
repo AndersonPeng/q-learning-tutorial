@@ -13,12 +13,12 @@ def get_discrete_state(state, bins, s_dim):
 #Main function
 def main():
     #Parameters
-    n_episode = 2
+    n_episode = 4
     n_bins = 16
 
     #Create environment
     env = gym.make('CartPole-v0')
-    s_dim = len(env.observation_space.high)
+    s_dim = env.observation_space.shape[0]
     a_dim = env.action_space.n
 
     #Create Q-table: (n_bins, n_bins, n_bins, n_bins, a_dim)
