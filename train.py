@@ -38,14 +38,14 @@ def main():
         np.linspace(-0.418, 0.418, n_bins), #Pole angle
         np.linspace(-4.0, 4.0, n_bins)      #Pole velocity at tip
     ]
-    q_table = np.zeros(([n_bins] * s_dim + [a_dim]), dtype=np.float32)
+    q_table = np.zeros([n_bins] * s_dim + [a_dim], dtype=np.float32)
 
     #Start training
-    total_rewards = np.zeros((n_episode+1), dtype=np.float32)
+    total_rewards = np.zeros(n_episode+1, dtype=np.float32)
     replay_buffer = deque(maxlen=buffer_size)
 
     #For each episode
-    for i_episode in range(n_episode+1):
+    for i_episode in range(n_episode):
         state = env.reset()
         discrete_state = get_discrete_state(state, bins, s_dim)
         total_reward = 0
@@ -71,7 +71,7 @@ def main():
                     s, a, r, next_s = replay_buffer[i]
                     max_next_q = np.max(q_table[next_s])
                     current_q = q_table[s + (a,)]
-                    q_table[s + (a,)] = current_q + lr * (reward + gamma*max_next_q - current_q)
+                    q_table[s + (a,)] = current_q + lr * (r + gamma*max_next_q - current_q)
 
             #Record total reward
             if done:
